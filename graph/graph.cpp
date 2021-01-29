@@ -27,6 +27,7 @@ vector<Interval> initialStateInterval;
 int m, k;
 double period, stepSize, err;
 vector<double> approx_err; // [add err here]
+int p_size;
 
 // Flowstar definition
 int order = 6;
@@ -63,7 +64,7 @@ void parseModel(char* modelPath) {
         fgets(buf, BUFSIZE, file);
         xexpr.push_back(Expression_AST<Real>(buf));
     }
-    int p_size = partition*partition;
+    p_size = partition*partition;
     uexpr.resize(p_size);
     for (int k = 0; k < p_size; k++) {
         for (int i = 0; i < ucnt; i++) {
@@ -124,7 +125,7 @@ void buildFlowstar() {
 vector<Interval> curInt;
 void buildGrids(int curDim=0) {
     if (curDim == 0) {
-        printf("[Info] Building grids.\n");    
+        printf("[Info] Building grids.\n");
     }
     if (curDim == xcnt) {
         grids.push_back(curInt);
@@ -169,9 +170,9 @@ void buildOneStepGraph() {
             {
                 process += 1;
                 printf("\r       Process: %.2f%%", 100.0 * process / (grids.size() * 2));
-                fflush(stdout);    
+                fflush(stdout);
             }
-            
+
 
             // The initial set is same as the current grid
             vector<Interval> initialState = grids[start];
@@ -181,24 +182,29 @@ void buildOneStepGraph() {
             Flowpipe initial_set(initialState);
             Result_of_Reachability result;
 
+            int x_i= initialState[0].sup()/(safeStateInterval[0].sup()/partition);
+            int y_i = initialState[0].sup()/(safeStateInterval[1].sup()/partition);
+            int id = partition * x_i + y_i; // l<=partition**2
             // Calculate the input if it meets the deadline.
             if (meet) {
-                for (int i = 0; i < ucnt; i++) {
-                    TaylorModel<Real> tm_u;
-                    uexpr[i].evaluate(tm_u, initial_set.tmvPre.tms, order, initial_set.domain, setting.tm_setting.cutoff_threshold, setting.g_setting);
-                    // [add error here]
-                    tm_u.remainder.bloat(approx_err[i]);
-                    // [end]
-                    initial_set.tmvPre.tms[xcnt + i] = tm_u;
-                }
+                    for (int i = 0; i < ucnt; i++) {
+                        TaylorModel <Real> tm_u;
+                        uexpr[id][i].evaluate(tm_u, initial_set.tmvPre.tms, order, initial_set.domain,
+                                          setting.tm_setting.cutoff_threshold, setting.g_setting);
+                        // [add error here]
+                        tm_u.remainder.bloat(approx_err[id]);
+                        // [end]
+                        initial_set.tmvPre.tms[xcnt + i] = tm_u;
+                    }
             }
+
 
             // Move forward one step
             vector<Constraint> unsafeSet;
             vector<Interval> reachableState;
             dynamics.reach(result, setting, initial_set, unsafeSet);
             result.fp_end_of_time.intEval(reachableState, order, setting.tm_setting.cutoff_threshold);
-            
+
             // Check safety and build edge
             bool safe = true;
             for (int i = 0; i < xcnt; i++) {
@@ -277,7 +283,7 @@ void buildKStepGraph() {
                     }
                 }
             }
-            
+
             for (int miss: unsafeSet) {
                 (*now)[id][miss].reset();
             }
@@ -293,7 +299,7 @@ void buildKStepGraph() {
         if ((*now)[id][0].any()) {
             Ts.set(id);
             edge += (*now)[id][0].count();
-            Tk |= (*now)[id][0]; 
+            Tk |= (*now)[id][0];
             for (int nextId = 0; nextId < n; nextId++) {
                 if ((*now)[id][0].test(nextId)) {
                     revKStepGraph[nextId].push_back(id);
@@ -376,7 +382,7 @@ void plotGrids() {
             r = max(r, dim.sup());
         }
         if (l < r) {
-            printf("          Safe initial region: from %f to %f.\n", l, r);    
+            printf("          Safe initial region: from %f to %f.\n", l, r);
         }
         return;
     }
