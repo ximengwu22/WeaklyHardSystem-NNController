@@ -13,7 +13,7 @@ const int BUFSIZE = 8096;
 char buf[BUFSIZE];
 
 // System definition
-int xcnt, ucnt, d, partition;
+int xcnt, ucnt, d, p_num;
 // [partition num]
 //int err_cnt;
 vector<string> xname;
@@ -25,7 +25,7 @@ vector<vector<Expression_AST<Real>>> uexpr;
 vector<Interval> safeStateInterval;
 vector<Interval> initialStateInterval;
 int m, k;
-double period, stepSize, err;
+double period, stepSize;
 vector<double> approx_err; // [add err here]
 int p_size;
 
@@ -46,25 +46,28 @@ dynamic_bitset<> Ts, Tk, Ti;
 void parseModel(char* modelPath) {
     printf("[Info] Parsing model.\n");
     FILE *file = fopen(modelPath, "r");
-    fscanf(file, "%d%d%d%d", &xcnt, &ucnt, &d, &partition);
+    fscanf(file, "%d%d%d%d", &xcnt, &ucnt, &d, &p_num);
+    // printf("=======Read data:========\n");
     for (int i = 0; i < xcnt; i++) {
         fscanf(file, "%s", buf);
         xname.push_back(buf);
         stateVars.declareVar(buf);
     }
-
+    // printf("=======Read data: xname: %s========\n", xname[0]);
     for (int i = 0; i < ucnt; i++) {
         fscanf(file, "%s", buf);
         uname.push_back(buf);
         stateVars.declareVar(buf);
     }
+    // printf("=======Read data: ucnt: %s========\n", uname[0]);
 //    handle buffer
-//    fgets(buf, BUFSIZE, file);
+    fgets(buf, BUFSIZE, file);
     for (int i = 0; i < xcnt; i++) {
         fgets(buf, BUFSIZE, file);
         xexpr.push_back(Expression_AST<Real>(buf));
     }
-    p_size = partition*partition;
+    // printf("=======Read data: xexpr ========\n");
+    p_size = p_num*p_num;
     uexpr.resize(p_size);
     for (int k = 0; k < p_size; k++) {
         for (int i = 0; i < ucnt; i++) {
@@ -72,12 +75,14 @@ void parseModel(char* modelPath) {
             uexpr[k].push_back(Expression_AST<Real>(buf));
         }
     }
-
+    // printf("=======Read data: uexpr %s========\n", uexpr[0]);
     // [add disturbance]
-    for (int i = 0; i < partition*partition; i++) {
-        fscanf(file, "%lf", &err)
-        approx_err.push_back(err)
+    double err;
+    for (int i = 0; i < p_size; i++) {
+        fscanf(file, "%lf", &err);
+        approx_err.push_back(err);
     }
+    // printf("=======Read data: err %lf========\n", approx_err[p_size-1]);
     // [end]
     fscanf(file, "%lf%lf", &period, &stepSize);
     fscanf(file, "%d%d", &m, &k);
@@ -182,9 +187,12 @@ void buildOneStepGraph() {
             Flowpipe initial_set(initialState);
             Result_of_Reachability result;
 
-            int x_i= initialState[0].sup()/(safeStateInterval[0].sup()/partition);
-            int y_i = initialState[0].sup()/(safeStateInterval[1].sup()/partition);
-            int id = partition * x_i + y_i; // l<=partition**2
+            int x_i= abs(initialState[0].sup()/(safeStateInterval[0].inf()+(safeStateInterval[0].inf()-safeStateInterval[0].sup())/p_num));
+            int y_i = abs(initialState[1].sup()/(safeStateInterval[1].inf()+(safeStateInterval[1].inf()-safeStateInterval[1].sup())/p_num));
+            int id = p_num * x_i + y_i; // l<=partition**2
+            // cout << "\n" << initialState[0] << " ; " << initialState[1] << endl;
+            // printf("=====Calculate x_i=====%d\n", x_i);
+            // printf("=====Calculate y_i=====%d\n", y_i);
             // Calculate the input if it meets the deadline.
             if (meet) {
                     for (int i = 0; i < ucnt; i++) {
@@ -371,7 +379,7 @@ void checkSafety() {
     }
 }
 
-void plotGrids() {
+void plotGrids(char* outputName) {
     if (grids[0].size() == 1) {
         printf("[Warning] No result image for 1 dimension.\n");
         double l = 1e100, r = 1e-100;
@@ -388,7 +396,7 @@ void plotGrids() {
     }
     Gnuplot gp;
     gp << "set terminal svg size 480, 480\n";
-    gp << "set output 'output.svg'\n";
+    gp << "set output 'output_" << outputName << ".svg'\n";
     gp << "set xrange [ " << safeStateInterval[0].inf() << " : " << safeStateInterval[0].sup() << " ]\n";
     gp << "set yrange [ " << safeStateInterval[1].inf() << " : " << safeStateInterval[1].sup() << " ]\n";
     vector<int> rowId;
@@ -456,5 +464,5 @@ int main(int argc, char** argv) {
     buildKStepGraph();
     findLargestClosedSubgraph();
     checkSafety();
-    plotGrids();
+    plotGrids(argv[2]);
 }

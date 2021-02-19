@@ -1,7 +1,7 @@
 #include <set>
 #include <queue>
 #include <boost/dynamic_bitset.hpp>
-#include "bernstein_poly_approx.h"
+#include "./bernstein_poly_approx.h"
 
 #include "Continuous.h"
 #include "gnuplot-iostream.h"
@@ -14,7 +14,7 @@ const int BUFSIZE = 8096;
 char buf[BUFSIZE];
 
 // System definition
-int xcnt, ucnt, d, partition;
+int xcnt, ucnt, d; // partition;
 // [partition num]
 //int err_cnt;
 vector<string> xname;
@@ -27,8 +27,16 @@ vector<Interval> safeStateInterval;
 vector<Interval> initialStateInterval;
 int m, k;
 double period, stepSize;  // err;
+
+char const *module_name = "controller_approximation_lib";
+char const *function_name1 = "poly_approx_controller";
+char const *function_name2 = "poly_approx_error";
+char const *degree_bound = "[1, 1]";
+char const *activation = "ReLU";
+char const *output_index = "0";
+char const *neural_network = "nn_2_relu";
 vector<double> approx_err; // [add err here]
-int p_size;
+// int p_size = 1;
 
 // Flowstar definition
 int order = 6;
@@ -46,26 +54,44 @@ dynamic_bitset<> Ts, Tk, Ti;
 
 void parseModel(char* modelPath) {
     printf("[Info] Parsing model.\n");
+
+    printf("\tto read File \n");
+
     FILE *file = fopen(modelPath, "r");
-    fscanf(file, "%d%d%d%d", &xcnt, &ucnt, &d, &partition);
+
+    printf("\tread File %c\n", *modelPath);
+
+    fscanf(file, "%d%d%d", &xcnt, &ucnt, &d);
+
+    // DEBUG -
+    printf("\txcnt, ucnt, d\n");
+
+    // p_size = partition*partition;
     for (int i = 0; i < xcnt; i++) {
         fscanf(file, "%s", buf);
         xname.push_back(buf);
         stateVars.declareVar(buf);
     }
 
+    printf("\txname\n");
+
     for (int i = 0; i < ucnt; i++) {
         fscanf(file, "%s", buf);
         uname.push_back(buf);
         stateVars.declareVar(buf);
     }
+
+    printf("\tuname\n");
+
 //    handle buffer
-//    fgets(buf, BUFSIZE, file);
+    fgets(buf, BUFSIZE, file);
     for (int i = 0; i < xcnt; i++) {
         fgets(buf, BUFSIZE, file);
         xexpr.push_back(Expression_AST<Real>(buf));
     }
-    p_size = partition*partition;
+
+    printf("\txexpress\n");
+
 //    uexpr.resize(p_size);
 //    for (int k = 0; k < p_size; k++) {
 //        for (int i = 0; i < ucnt; i++) {
@@ -81,7 +107,13 @@ void parseModel(char* modelPath) {
 //    }
     // [end]
     fscanf(file, "%lf%lf", &period, &stepSize);
+
+    printf("\tstepSize+period\n");
+
     fscanf(file, "%d%d", &m, &k);
+
+    printf("\tm,k\n");
+
     for (int i = 0; i < xcnt; i++) {
         double start, end;
         fscanf(file, "%lf%lf", &start, &end);
@@ -92,6 +124,9 @@ void parseModel(char* modelPath) {
         fscanf(file, "%lf%lf", &start, &end);
         initialStateInterval.push_back({start, end});
     }
+
+    printf("\tsafeState+Initial.\n");
+
     fclose(file);
 }
 
@@ -194,11 +229,13 @@ void buildOneStepGraph() {
                     // -----------------
                     // TODO: Use uexpr
                     // -----------------
+                    string strBox = "[" + initialState[0].toString() + "," + initialState[1].toString() + "]";
                     string strExpU = bernsteinPolyApproximation(module_name, function_name1, degree_bound, strBox.c_str(), activation, output_index, neural_network);
                     Expression_AST<Real> exprU = (Expression_AST<Real>) strExpU;
                     double err = stod(bernsteinPolyApproximation(module_name, function_name2, degree_bound, strBox.c_str(), activation, output_index, neural_network));
+
                     exprU.evaluate(tm_u, initial_set.tmvPre.tms, order, initial_set.domain,
-                                          setting.tm_setting.cutoff_threshold, setting.g_setting);
+                                   setting.tm_setting.cutoff_threshold, setting.g_setting);
                     tm_u.remainder.bloat(err);
                     initial_set.tmvPre.tms[xcnt + i] = tm_u;
                 }
