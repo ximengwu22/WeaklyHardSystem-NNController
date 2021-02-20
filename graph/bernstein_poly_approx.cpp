@@ -13,9 +13,6 @@ string bernsteinPolyApproximation(char const *module_name, char const *function_
 
 	pName = PyUnicode_DecodeFSDefault(module_name);
 	printf("[S] PyUnicode_DecodeFSDefault.\n");
-	printf("\t");
-	printf(pName);
-	printf("\n");
 	/* Error checking of pName left out */
 
 	pModule = PyImport_Import(pName);
@@ -24,6 +21,7 @@ string bernsteinPolyApproximation(char const *module_name, char const *function_
 	printf("[S] Py_DECREF.\n");
 
 	if (pModule != NULL) {
+		printf("\tpModule is not NULL\n");
 		pFunc = PyObject_GetAttrString(pModule, function_name);
 		/* pFunc is a new reference */
 
