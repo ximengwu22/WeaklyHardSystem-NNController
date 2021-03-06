@@ -6,7 +6,7 @@ LINK_FLAGS = -g -L ../graph -L/usr/local/lib -L../flowstar
 OBJ = Interval.o Variables.o settings.o Matrix.o Geometry.o Constraints.o Continuous.o lex.yy.o modelParser.tab.o
 
 
-graph_in_grids: graph_in_grids.o
+../graph_in_grids: graph_in_grids.o
 	g++ -O3 -w $(LINK_FLAGS) -o $@ $^ $(OBJ) libbernstein_poly_approx.a $(LIBS)
 
 %.o: %.cc
@@ -17,4 +17,4 @@ graph_in_grids: graph_in_grids.o
 	$(CXX) -O3 -c $(CFLAGS) -o $@ $<
 
 clean:
-	rm -f *.o main_read
+	rm -f *.o graph_in_grids

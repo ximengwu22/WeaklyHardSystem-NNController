@@ -481,7 +481,7 @@ def run(args):
     cmd = './' + args.filename
     os.system(cmd)
 
-
+'''
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--filename', default='nn_1_relu_retrained', type=str,
@@ -499,11 +499,11 @@ if __name__ == '__main__':
     output_i = 0
     b,_,_ = nn_poly_approx_bernstein(nn.controller,x,d,box,output_i)
     print('BersteinPoly: ', b)
-    '''
+    
     fo = open("result/BPres-"+args.filename+".txt", "w+")
     fo.write('BersteinPoly: {}'.format(b)+'\n')
     fo.close()
-    '''
+    
     err = bernstein_error_partition_cuda(nn, # nn
             nn.controller,  # f,
             d,              # degree_bound,
@@ -512,8 +512,9 @@ if __name__ == '__main__':
             actv,      # activation:{sigmoid, tanh, ReLU}
             args.filename)  # filename
     print("error: ", err)
-    '''
+    
     fo = open("result/BPres-" + args.filename + ".txt", "a+")
     fo.write('error: {}'.format(err) + '\n')
     fo.close()
-    '''
+    
+'''

@@ -59,7 +59,7 @@ void parseModel(char* modelPath) {
 
     FILE *file = fopen(modelPath, "r");
 
-    printf("\tread File %c\n", *modelPath);
+    // printf("\tread File %s\n", *modelPath);
 
     fscanf(file, "%d%d%d", &xcnt, &ucnt, &d);
 
@@ -429,9 +429,10 @@ void plotGrids() {
         }
         return;
     }
+    // const string fName(*neural_network);
     Gnuplot gp;
     gp << "set terminal svg size 480, 480\n";
-    gp << "set output 'output.svg'\n";
+    gp << "set output 'output_" << neural_network << ".svg'\n";
     gp << "set xrange [ " << safeStateInterval[0].inf() << " : " << safeStateInterval[0].sup() << " ]\n";
     gp << "set yrange [ " << safeStateInterval[1].inf() << " : " << safeStateInterval[1].sup() << " ]\n";
     vector<int> rowId;
